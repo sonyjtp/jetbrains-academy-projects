@@ -1,15 +1,21 @@
 package com.jba.projects
 
 import java.io.File
+import kotlin.math.round
+import kotlin.system.measureTimeMillis
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTime
 
 private val allWords = mutableListOf<String>()
 private val candidateWords = mutableListOf<String>()
+private val previousClues = mutableListOf<String>()
+private val wrongLetters = mutableSetOf<String>()
 private const val VALID_WORD_LENGTH = 5
 
 fun main(args: Array<String>) {
     validateArgs(args)?.let {
         if (validateWords(it.first, it.second)) {
-            println("Words Virtuoso")
+            println("Words Virtuoso\n")
             play()
         }
     }
@@ -17,47 +23,40 @@ fun main(args: Array<String>) {
 
 fun play() {
     var exit = -1
+    var tries = 1
     val secretWord = candidateWords[(0 until candidateWords.size).random()]
-    while (exit < 0) {
-        println("Input a 5-letter word:")
-        val guess = readln()
-        if ("exit".equals(guess, true)) break
-        if (validateGuess(guess, secretWord)) {
-            println("Correct!")
-            exit = 0
+    val timeTaken = measureTimeMillis {
+        while (exit < 0) {
+            println("Input a 5-letter word:")
+            val guess = readln()
+            println("\n")
+            if ("exit".equals(guess, true)) break
+            if (validateGuess(guess, secretWord)) exit = 0 else tries += 1
         }
     }
     if (exit == -1) println("The game is over.")
+    else {
+        println("${secretWord.uppercase()}\nCorrect!\n")
+        if (tries == 1) println("Amazing luck! The solution was found at once.")
+        else println("The solution was found after $tries tries in ${round(timeTaken / 1000.0).toInt()} seconds.")
+    }
 }
 
 fun validateGuess(guess: String, secretWord: String): Boolean {
-    return when {
-        guess.equals(secretWord, true) -> true
-        guess.length != VALID_WORD_LENGTH -> {
-            println("The input isn't a 5-letter word.")
-            false
+    var retVal = false
+    when {
+        guess.equals(secretWord, true) -> {
+            println(previousClues.joinToString("\n"))
+            retVal = true
         }
 
-        !isWord(guess) -> {
-            println("One or more letters of the input aren't valid.")
-            false
-        }
-
-        hasDuplicateLetters(guess) -> {
-            println("The input has duplicate letters.")
-            false
-        }
-
-        guess.lowercase() !in allWords -> {
-            println("The input word isn't included in my words list.")
-            false
-        }
-
-        else -> {
-            compareWords(guess, secretWord)
-            false
-        }
+        guess.length != VALID_WORD_LENGTH -> println("The input isn't a 5-letter word.")
+        !isWord(guess) -> println("One or more letters of the input aren't valid.")
+        hasDuplicateLetters(guess) -> println("The input has duplicate letters.")
+        guess.lowercase() !in allWords -> println("The input word isn't included in my words list.")
+        else -> compareWords(guess, secretWord)
     }
+    return retVal
 }
 
 private fun compareWords(guess: String, secretWord: String) {
@@ -67,11 +66,26 @@ private fun compareWords(guess: String, secretWord: String) {
             when (guess[i]) {
                 secretWord[i] -> guess[i].uppercase()
                 in secretWord -> guess[i].lowercase()
-                else -> "_"
+                else -> {
+                    wrongLetters.add(guess[i].uppercase())
+                    "_"
+                }
             }
         )
     }
-    println(printVal.joinToString(""))
+    val clueString = printVal.joinToString("")
+    previousClues.add(clueString)
+    println(previousClues.joinToString("\n"))
+    if (wrongLetters.isNotEmpty()) {
+        println(
+            "\n${
+                wrongLetters.toMutableList().let {
+                    it.sort()
+                    it
+                }.joinToString("")
+            }\n"
+        )
+    }
 }
 
 private fun validateArgs(args: Array<String>): Pair<File, File>? {
