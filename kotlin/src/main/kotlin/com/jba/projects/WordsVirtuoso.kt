@@ -3,8 +3,6 @@ package com.jba.projects
 import java.io.File
 import kotlin.math.round
 import kotlin.system.measureTimeMillis
-import kotlin.time.ExperimentalTime
-import kotlin.time.measureTime
 
 private val allWords = mutableListOf<String>()
 private val candidateWords = mutableListOf<String>()
@@ -21,7 +19,7 @@ fun main(args: Array<String>) {
     }
 }
 
-fun play() {
+private fun play() {
     var exit = -1
     var tries = 1
     val secretWord = candidateWords[(0 until candidateWords.size).random()]
@@ -36,13 +34,13 @@ fun play() {
     }
     if (exit == -1) println("The game is over.")
     else {
-        println("${secretWord.uppercase()}\nCorrect!\n")
+        println("${secretWord.map { color(it.uppercase(), Color.GREEN) }.joinToString("")}\nCorrect!\n")
         if (tries == 1) println("Amazing luck! The solution was found at once.")
         else println("The solution was found after $tries tries in ${round(timeTaken / 1000.0).toInt()} seconds.")
     }
 }
 
-fun validateGuess(guess: String, secretWord: String): Boolean {
+private fun validateGuess(guess: String, secretWord: String): Boolean {
     var retVal = false
     when {
         guess.equals(secretWord, true) -> {
@@ -60,15 +58,15 @@ fun validateGuess(guess: String, secretWord: String): Boolean {
 }
 
 private fun compareWords(guess: String, secretWord: String) {
-    val printVal = mutableListOf<String>()
+    var printVal = mutableListOf<String>()
     for (i in guess.indices) {
         printVal.add(
             when (guess[i]) {
-                secretWord[i] -> guess[i].uppercase()
-                in secretWord -> guess[i].lowercase()
+                secretWord[i] -> color(guess[i].uppercase(), Color.GREEN)
+                in secretWord -> color(guess[i].uppercase(), Color.YELLOW)
                 else -> {
                     wrongLetters.add(guess[i].uppercase())
-                    "_"
+                    color(guess[i].uppercase(), Color.GREY)
                 }
             }
         )
@@ -77,16 +75,16 @@ private fun compareWords(guess: String, secretWord: String) {
     previousClues.add(clueString)
     println(previousClues.joinToString("\n"))
     if (wrongLetters.isNotEmpty()) {
-        println(
-            "\n${
-                wrongLetters.toMutableList().let {
-                    it.sort()
-                    it
-                }.joinToString("")
-            }\n"
+        println("\n${
+            color(wrongLetters.toMutableList().let {
+                it.sort()
+                it
+            }.joinToString(""), Color.AZURE)
+        }\n"
         )
     }
 }
+
 
 private fun validateArgs(args: Array<String>): Pair<File, File>? {
     if (args.size != 2) {
@@ -134,8 +132,19 @@ private fun validateWords(wordsFile: File, candidateWordsFile: File): Boolean {
     return invalidWordCount == 0 && invalidCandidateCount == 0 && missingWordCount == 0
 }
 
+private fun color(str: String, color: Color): String {
+    return when (color) {
+        Color.GREEN -> "\u001B[48:5:10m${str.uppercase()}\u001B[0m"
+        Color.YELLOW -> "\u001B[48:5:11m${str.uppercase()}\u001B[0m"
+        Color.GREY -> "\u001B[48:5:7m${str.uppercase()}\u001B[0m"
+        Color.AZURE -> "\u001B[48:5:14m${str}\u001B[0m"
+    }
+}
+
 private fun isValid(word: String) = isWord(word) && !hasDuplicateLetters(word)
 
 private fun isWord(word: String) = Regex("^[a-zA-Z]{5}$").matches(word)
 
 private fun hasDuplicateLetters(word: String) = word.length != word.toCharArray().toSet().size
+
+private enum class Color { GREEN, YELLOW, GREY, AZURE }
